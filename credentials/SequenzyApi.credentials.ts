@@ -5,10 +5,16 @@ import type {
   INodeProperties,
 } from "n8n-workflow";
 
+import { getSequenzyApiBaseUrl } from "../nodes/shared/SequenzyApiBaseUrl";
+
 export class SequenzyApi implements ICredentialType {
   name = "sequenzyApi";
   displayName = "Sequenzy API";
   documentationUrl = "https://docs.sequenzy.com/api-reference";
+  icon = {
+    light: "file:../nodes/Sequenzy/sequenzy.svg",
+    dark: "file:../nodes/Sequenzy/sequenzy.svg",
+  } as const;
 
   properties: INodeProperties[] = [
     {
@@ -21,7 +27,7 @@ export class SequenzyApi implements ICredentialType {
       default: "",
       required: true,
       description:
-        'Find your API key in <a href="https://app.sequenzy.com/settings/api" target="_blank">Sequenzy Settings > API Keys</a>. It starts with "ek_".',
+        'Find your workspace API key in the <a href="https://sequenzy.com/dashboard" target="_blank">Sequenzy dashboard</a>. After you sign in, go to Settings &gt; API Keys. New keys start with "seq_live_"; legacy "ek_" keys remain supported.',
     },
   ];
 
@@ -36,7 +42,7 @@ export class SequenzyApi implements ICredentialType {
 
   test: ICredentialTestRequest = {
     request: {
-      baseURL: "https://api.sequenzy.com/api/v1",
+      baseURL: getSequenzyApiBaseUrl(),
       url: "/subscribers/me",
       method: "GET",
     },

@@ -4,8 +4,15 @@ import type {
   INodeType,
   INodeTypeDescription,
   IHttpRequestMethods,
+  JsonObject,
 } from "n8n-workflow";
-import { NodeApiError } from "n8n-workflow";
+import {
+  NodeApiError,
+  NodeConnectionTypes,
+  NodeOperationError,
+} from "n8n-workflow";
+
+import { getSequenzyApiBaseUrl } from "../shared/SequenzyApiBaseUrl";
 
 export class Sequenzy implements INodeType {
   description: INodeTypeDescription = {
@@ -13,6 +20,7 @@ export class Sequenzy implements INodeType {
     name: "sequenzy",
     icon: "file:sequenzy.svg",
     group: ["transform"],
+    usableAsTool: true,
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
     description:
@@ -20,8 +28,8 @@ export class Sequenzy implements INodeType {
     defaults: {
       name: "Sequenzy",
     },
-    inputs: ["main"],
-    outputs: ["main"],
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
     credentials: [
       {
         name: "sequenzyApi",
@@ -67,7 +75,8 @@ export class Sequenzy implements INodeType {
           {
             name: "Create or Update",
             value: "upsert",
-            description: "Create a new subscriber or update an existing one",
+            description:
+              "Create a new record, or update the current one if it already exists (upsert)",
             action: "Create or update a subscriber",
           },
           {
@@ -142,7 +151,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["subscriber"],
@@ -150,7 +158,8 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The subscriber email address",
+        description:
+          "The subscriber email address. Required when creating a new subscriber.",
       },
       {
         displayName: "Additional Fields",
@@ -165,25 +174,6 @@ export class Sequenzy implements INodeType {
           },
         },
         options: [
-          {
-            displayName: "First Name",
-            name: "firstName",
-            type: "string",
-            default: "",
-          },
-          {
-            displayName: "Last Name",
-            name: "lastName",
-            type: "string",
-            default: "",
-          },
-          {
-            displayName: "Tags",
-            name: "tags",
-            type: "string",
-            default: "",
-            description: "Comma-separated list of tags to assign",
-          },
           {
             displayName: "Custom Attributes",
             name: "customAttributes",
@@ -217,9 +207,35 @@ export class Sequenzy implements INodeType {
             displayName: "Enroll in Sequences",
             name: "enrollInSequences",
             type: "boolean",
-            default: false,
+            default: true,
             description:
               "Whether to enroll the subscriber in matching sequences",
+          },
+          {
+            displayName: "External ID",
+            name: "externalId",
+            type: "string",
+            default: "",
+            description: "Your app/customer/user ID for this subscriber",
+          },
+          {
+            displayName: "First Name",
+            name: "firstName",
+            type: "string",
+            default: "",
+          },
+          {
+            displayName: "Last Name",
+            name: "lastName",
+            type: "string",
+            default: "",
+          },
+          {
+            displayName: "Tags",
+            name: "tags",
+            type: "string",
+            default: "",
+            description: "Comma-separated list of tags to assign",
           },
         ],
       },
@@ -230,7 +246,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["subscriber"],
@@ -238,7 +253,21 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The email address to search for",
+        description:
+          "The email address to search for. Provide email or external ID.",
+      },
+      {
+        displayName: "External ID",
+        name: "externalId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["subscriber"],
+            operation: ["get"],
+          },
+        },
+        default: "",
+        description: "Your app/customer/user ID for this subscriber",
       },
 
       // Fields for Subscriber: Delete
@@ -247,7 +276,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["subscriber"],
@@ -255,7 +283,21 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The email address of the subscriber to delete",
+        description:
+          "The email address of the subscriber to delete. Provide email or external ID.",
+      },
+      {
+        displayName: "External ID",
+        name: "externalId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["subscriber"],
+            operation: ["delete"],
+          },
+        },
+        default: "",
+        description: "Your app/customer/user ID for this subscriber",
       },
 
       // Fields for Tag: Add
@@ -264,7 +306,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["tag"],
@@ -272,7 +313,21 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The subscriber email address",
+        description:
+          "The subscriber email address. Required when creating a new subscriber.",
+      },
+      {
+        displayName: "External ID",
+        name: "externalId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["tag"],
+            operation: ["add"],
+          },
+        },
+        default: "",
+        description: "Your app/customer/user ID for this subscriber",
       },
       {
         displayName: "Tag",
@@ -324,7 +379,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["tag"],
@@ -332,7 +386,21 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The subscriber email address",
+        description:
+          "The subscriber email address. Provide email or external ID.",
+      },
+      {
+        displayName: "External ID",
+        name: "externalId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["tag"],
+            operation: ["remove"],
+          },
+        },
+        default: "",
+        description: "Your app/customer/user ID for this subscriber",
       },
       {
         displayName: "Tag",
@@ -355,7 +423,6 @@ export class Sequenzy implements INodeType {
         name: "email",
         type: "string",
         placeholder: "name@email.com",
-        required: true,
         displayOptions: {
           show: {
             resource: ["event"],
@@ -363,7 +430,21 @@ export class Sequenzy implements INodeType {
           },
         },
         default: "",
-        description: "The subscriber email address",
+        description:
+          "The subscriber email address. Required when creating a new subscriber.",
+      },
+      {
+        displayName: "External ID",
+        name: "externalId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["event"],
+            operation: ["trigger"],
+          },
+        },
+        default: "",
+        description: "Your app/customer/user ID for this subscriber",
       },
       {
         displayName: "Event Name",
@@ -443,6 +524,7 @@ export class Sequenzy implements INodeType {
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
+    const apiBaseUrl = getSequenzyApiBaseUrl();
     const resource = this.getNodeParameter("resource", 0) as string;
     const operation = this.getNodeParameter("operation", 0) as string;
 
@@ -459,6 +541,7 @@ export class Sequenzy implements INodeType {
             ) as {
               firstName?: string;
               lastName?: string;
+              externalId?: string;
               tags?: string;
               customAttributes?: {
                 attribute?: Array<{ key: string; value: string }>;
@@ -466,7 +549,22 @@ export class Sequenzy implements INodeType {
               enrollInSequences?: boolean;
             };
 
-            const body: Record<string, unknown> = { email };
+            const body: Record<string, unknown> = {
+              duplicateStrategy: "overwrite",
+            };
+            if (email) {
+              body.email = email;
+            }
+            if (additionalFields.externalId) {
+              body.externalId = additionalFields.externalId;
+            }
+            if (!body.email && !body.externalId) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             if (additionalFields.firstName) {
               body.firstName = additionalFields.firstName;
@@ -494,7 +592,7 @@ export class Sequenzy implements INodeType {
                 "sequenzyApi",
                 {
                   method: "POST" as IHttpRequestMethods,
-                  url: "https://api.sequenzy.com/api/v1/subscribers",
+                  url: `${apiBaseUrl}/subscribers`,
                   body,
                   json: true,
                 }
@@ -503,6 +601,20 @@ export class Sequenzy implements INodeType {
             responseData = responseData.subscriber;
           } else if (operation === "get") {
             const email = this.getNodeParameter("email", i) as string;
+            const externalId = this.getNodeParameter("externalId", i) as string;
+            const path = email
+              ? `/subscribers/${encodeURIComponent(email)}`
+              : externalId
+                ? `/subscribers/external?externalId=${encodeURIComponent(externalId)}`
+                : null;
+
+            if (!path) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             try {
               responseData =
@@ -511,7 +623,7 @@ export class Sequenzy implements INodeType {
                   "sequenzyApi",
                   {
                     method: "GET" as IHttpRequestMethods,
-                    url: `https://api.sequenzy.com/api/v1/subscribers/${encodeURIComponent(email)}`,
+                    url: `${apiBaseUrl}${path}`,
                     json: true,
                   }
                 );
@@ -520,27 +632,44 @@ export class Sequenzy implements INodeType {
               if ((error as { httpCode?: number }).httpCode === 404) {
                 responseData = null;
               } else {
-                throw error;
+                throw new NodeApiError(this.getNode(), error as JsonObject, {
+                  itemIndex: i,
+                });
               }
             }
           } else if (operation === "delete") {
             const email = this.getNodeParameter("email", i) as string;
+            const externalId = this.getNodeParameter("externalId", i) as string;
+            const path = email
+              ? `/subscribers/${encodeURIComponent(email)}`
+              : externalId
+                ? `/subscribers/external?externalId=${encodeURIComponent(externalId)}`
+                : null;
+
+            if (!path) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             await this.helpers.httpRequestWithAuthentication.call(
               this,
               "sequenzyApi",
               {
                 method: "DELETE" as IHttpRequestMethods,
-                url: `https://api.sequenzy.com/api/v1/subscribers/${encodeURIComponent(email)}`,
+                url: `${apiBaseUrl}${path}`,
                 json: true,
               }
             );
 
-            responseData = { deleted: true, email };
+            responseData = { deleted: true, email, externalId };
           }
         } else if (resource === "tag") {
           if (operation === "add") {
             const email = this.getNodeParameter("email", i) as string;
+            const externalId = this.getNodeParameter("externalId", i) as string;
             const tag = this.getNodeParameter("tag", i) as string;
             const additionalFields = this.getNodeParameter(
               "additionalFields",
@@ -550,7 +679,20 @@ export class Sequenzy implements INodeType {
               lastName?: string;
             };
 
-            const body: Record<string, unknown> = { email, tag };
+            const body: Record<string, unknown> = { tag };
+            if (email) {
+              body.email = email;
+            }
+            if (externalId) {
+              body.externalId = externalId;
+            }
+            if (!body.email && !body.externalId) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             if (additionalFields.firstName) {
               body.firstName = additionalFields.firstName;
@@ -565,14 +707,29 @@ export class Sequenzy implements INodeType {
                 "sequenzyApi",
                 {
                   method: "POST" as IHttpRequestMethods,
-                  url: "https://api.sequenzy.com/api/v1/subscribers/tags",
+                  url: `${apiBaseUrl}/subscribers/tags`,
                   body,
                   json: true,
                 }
               );
           } else if (operation === "remove") {
             const email = this.getNodeParameter("email", i) as string;
+            const externalId = this.getNodeParameter("externalId", i) as string;
             const tag = this.getNodeParameter("tag", i) as string;
+            const body: Record<string, unknown> = { tag };
+            if (email) {
+              body.email = email;
+            }
+            if (externalId) {
+              body.externalId = externalId;
+            }
+            if (!body.email && !body.externalId) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             responseData =
               await this.helpers.httpRequestWithAuthentication.call(
@@ -580,8 +737,8 @@ export class Sequenzy implements INodeType {
                 "sequenzyApi",
                 {
                   method: "POST" as IHttpRequestMethods,
-                  url: "https://api.sequenzy.com/api/v1/subscribers/tags/remove",
-                  body: { email, tag },
+                  url: `${apiBaseUrl}/subscribers/tags/remove`,
+                  body,
                   json: true,
                 }
               );
@@ -589,6 +746,7 @@ export class Sequenzy implements INodeType {
         } else if (resource === "event") {
           if (operation === "trigger") {
             const email = this.getNodeParameter("email", i) as string;
+            const externalId = this.getNodeParameter("externalId", i) as string;
             const eventName = this.getNodeParameter("eventName", i) as string;
             const additionalFields = this.getNodeParameter(
               "additionalFields",
@@ -599,7 +757,20 @@ export class Sequenzy implements INodeType {
               lastName?: string;
             };
 
-            const body: Record<string, unknown> = { email, event: eventName };
+            const body: Record<string, unknown> = { event: eventName };
+            if (email) {
+              body.email = email;
+            }
+            if (externalId) {
+              body.externalId = externalId;
+            }
+            if (!body.email && !body.externalId) {
+              throw new NodeOperationError(
+                this.getNode(),
+                "Provide either Email or External ID",
+                { itemIndex: i }
+              );
+            }
 
             if (additionalFields.properties?.property) {
               const props: Record<string, string> = {};
@@ -621,7 +792,7 @@ export class Sequenzy implements INodeType {
                 "sequenzyApi",
                 {
                   method: "POST" as IHttpRequestMethods,
-                  url: "https://api.sequenzy.com/api/v1/subscribers/events",
+                  url: `${apiBaseUrl}/subscribers/events`,
                   body,
                   json: true,
                 }
@@ -630,11 +801,14 @@ export class Sequenzy implements INodeType {
         }
 
         if (responseData !== undefined && responseData !== null) {
-          returnData.push({ json: responseData });
+          returnData.push({ json: responseData, pairedItem: { item: i } });
         }
       } catch (error) {
         if (this.continueOnFail()) {
-          returnData.push({ json: { error: (error as Error).message } });
+          returnData.push({
+            json: { error: (error as Error).message },
+            pairedItem: { item: i },
+          });
           continue;
         }
         throw new NodeApiError(this.getNode(), error as Record<string, string>);
