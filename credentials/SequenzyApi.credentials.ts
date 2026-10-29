@@ -5,7 +5,7 @@ import type {
   INodeProperties,
 } from "n8n-workflow";
 
-import { getSequenzyApiBaseUrl } from "../nodes/shared/SequenzyApiBaseUrl";
+import { SEQUENZY_PRODUCTION_API_BASE_URL } from "../nodes/shared/SequenzyApiBaseUrl";
 
 export class SequenzyApi implements ICredentialType {
   name = "sequenzyApi";
@@ -29,6 +29,14 @@ export class SequenzyApi implements ICredentialType {
       description:
         'Find your workspace API key in the <a href="https://sequenzy.com/dashboard" target="_blank">Sequenzy dashboard</a>. After you sign in, go to Settings &gt; API Keys. New keys start with "seq_live_"; legacy "ek_" keys remain supported.',
     },
+    {
+      displayName: "API Base URL",
+      name: "baseUrl",
+      type: "string",
+      default: SEQUENZY_PRODUCTION_API_BASE_URL,
+      description:
+        "Leave the default. Change it only to test the node against a local Sequenzy API, such as http://127.0.0.1:4000/api/v1.",
+    },
   ];
 
   authenticate: IAuthenticateGeneric = {
@@ -42,7 +50,7 @@ export class SequenzyApi implements ICredentialType {
 
   test: ICredentialTestRequest = {
     request: {
-      baseURL: getSequenzyApiBaseUrl(),
+      baseURL: `={{$credentials.baseUrl || "${SEQUENZY_PRODUCTION_API_BASE_URL}"}}`,
       url: "/subscribers/me",
       method: "GET",
     },

@@ -524,7 +524,8 @@ export class Sequenzy implements INodeType {
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
-    const apiBaseUrl = getSequenzyApiBaseUrl();
+    const credentials = await this.getCredentials("sequenzyApi");
+    const apiBaseUrl = getSequenzyApiBaseUrl(credentials.baseUrl);
     const resource = this.getNodeParameter("resource", 0) as string;
     const operation = this.getNodeParameter("operation", 0) as string;
 

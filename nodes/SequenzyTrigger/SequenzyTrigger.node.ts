@@ -98,9 +98,10 @@ async function requestWithAuthentication<TResponse>(
   path: string,
   body?: IDataObject
 ): Promise<TResponse> {
+  const credentials = await context.getCredentials("sequenzyApi");
   const options = {
     method,
-    url: `${getSequenzyApiBaseUrl()}${path}`,
+    url: `${getSequenzyApiBaseUrl(credentials.baseUrl)}${path}`,
     json: true,
     ...(body ? { body } : {}),
   };

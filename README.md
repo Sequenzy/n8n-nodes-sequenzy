@@ -173,15 +173,11 @@ npm run dev
 ### Testing Locally
 
 The node uses `https://api.sequenzy.com/api/v1` by default. To run it against
-the local Sequenzy API instead, set `SEQUENZY_API_BASE_URL` when starting n8n:
-
-```bash
-SEQUENZY_API_BASE_URL=http://127.0.0.1:4000/api/v1 npm run dev
-```
-
-Restart n8n after changing the environment variable. An unset or blank value
-uses the production API. This environment override is for local or self-hosted
-n8n; n8n Cloud does not expose custom environment variables to community nodes.
+the local Sequenzy API instead, start n8n with `npm run dev`, open the
+**Sequenzy API** credential and set **API Base URL** to
+`http://127.0.0.1:4000/api/v1`. A blank value uses the production API.
+Credentials created before version 1.1.2 have no API Base URL and use
+production.
 
 The trigger also needs a public HTTPS callback URL. For local testing, install
 ngrok, add the authtoken from your ngrok account, and expose n8n's port:
@@ -192,11 +188,10 @@ ngrok config add-authtoken YOUR_NGROK_AUTHTOKEN
 ngrok http 5678
 ```
 
-Keep ngrok running, copy its HTTPS forwarding URL, then restart n8n with both
-local-development variables:
+Keep ngrok running, copy its HTTPS forwarding URL, then restart n8n with its
+public webhook URL:
 
 ```bash
-SEQUENZY_API_BASE_URL=http://127.0.0.1:4000/api/v1 \
 N8N_WEBHOOK_URL=https://YOUR-NGROK-DOMAIN.ngrok.app/ \
 N8N_PROXY_HOPS=1 \
 npm run dev

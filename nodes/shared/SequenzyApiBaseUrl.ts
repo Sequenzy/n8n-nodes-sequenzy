@@ -1,19 +1,16 @@
 export const SEQUENZY_PRODUCTION_API_BASE_URL =
   "https://api.sequenzy.com/api/v1";
 
-type SequenzyEnvironment = Readonly<Record<string, string | undefined>>;
+// Verified community nodes may not read environment variables, so the local
+// development override lives in the optional credential field instead.
+// Credentials saved before that field existed have no value and use production.
+export function getSequenzyApiBaseUrl(configuredBaseUrl?: unknown): string {
+  const baseUrl =
+    typeof configuredBaseUrl === "string" ? configuredBaseUrl.trim() : "";
 
-export function getSequenzyApiBaseUrl(
-  // n8n Cloud does not expose custom environment variables. This narrowly
-  // scoped override is for self-hosted/local node development only.
-  // eslint-disable-next-line @n8n/community-nodes/no-restricted-globals
-  environment: SequenzyEnvironment = process.env
-): string {
-  const configuredBaseUrl = environment["SEQUENZY_API_BASE_URL"]?.trim();
-
-  if (!configuredBaseUrl) {
+  if (!baseUrl) {
     return SEQUENZY_PRODUCTION_API_BASE_URL;
   }
 
-  return configuredBaseUrl.replace(/\/+$/, "");
+  return baseUrl.replace(/\/+$/, "");
 }
